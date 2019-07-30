@@ -77,8 +77,11 @@ object TpchQuery {
   def main(args: Array[String]): Unit = {
 
     var queryNum = 0;
-    if (args.length > 0)
+    var iterNum = 1;
+    if (args.length > 0) {
       queryNum = args(0).toInt
+      iterNum = args(1).toInt
+    }
 
     val conf = new SparkConf().setAppName("Simple Application")
     val sc = new SparkContext(conf)
@@ -92,7 +95,9 @@ object TpchQuery {
     val schemaProvider = new TpchSchemaProvider(sc, INPUT_DIR)
 
     val output = new ListBuffer[(String, Float)]
-    output ++= executeQueries(sc, schemaProvider, queryNum)
+    for (i <- 1 to iterNum) {
+      output ++= executeQueries(sc, schemaProvider, queryNum)
+    }
 
     val outFile = new File("TIMES.txt")
     val bw = new BufferedWriter(new FileWriter(outFile, true))
