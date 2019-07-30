@@ -118,12 +118,23 @@ object TpchQuery {
       input = "/input/sf" + args(2)
     }
 
-    val sparkSession = SparkSession.builder()
+    val localConfBuilder = SparkSession.builder()
       .master("local[1]")
       .appName("microbenchmark")
       .config("spark.sql.shuffle.partitions", 1)
       .config("spark.sql.autoBroadcastJoinThreshold", 1)
-      .getOrCreate()
+      .config("spark.executor.memory", "20g")
+      .config("spark.driver.memory", "8g")
+
+    val yarnConfBuilder = SparkSession.builder()
+      .master("yarn")
+      .appName("microbenchmark")
+      .config("spark.submit.deployMode", "cluster")
+      .config("spark.executor.cores", 1)
+      .config("spark.executor.memory", "28g")
+      .config("spark.driver.memory", "20g")
+
+    val sparkSession = localConfBuilder.getOrCreate()
 
     // read files from local FS
     val INPUT_DIR = "file://" + new File(".").getAbsolutePath() + "/dbgen" + input
