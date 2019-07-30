@@ -5,7 +5,11 @@ import org.apache.spark.SparkConf
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
 import org.apache.spark.sql._
+
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -74,32 +78,52 @@ object TpchQuery {
     return results
   }
 
+  def runBenchmark(sc: SparkContext, schemaProvider: TpchSchemaProvider, queryNum: Int, numIter: Int): ListBuffer[(String, Float)] = {
+    val output = new ListBuffer[(String, Float)]
+
+    sc.getConf.set("spark.sql.codegen.wholeStage", "false")
+    for (i <- 1 to numIter) {
+      output.+=(("WSCG-OFF", i))
+      output ++= executeQueries(sc, schemaProvider, queryNum)
+    }
+
+    sc.getConf.set("spark.sql.codegen.wholeStage", "true")
+    for (i <- 1 to numIter) {
+      output.+=(("WSCG-ON", i))
+      output ++= executeQueries(sc, schemaProvider, queryNum)
+    }
+
+    output
+  }
+
   def main(args: Array[String]): Unit = {
 
     var queryNum = 0;
-    var iterNum = 1;
+    var numIter = 1;
+    var sf = 1;
+    var input = ""
     if (args.length > 0) {
       queryNum = args(0).toInt
-      iterNum = args(1).toInt
+      numIter = args(1).toInt
+      sf = args(2).toInt
+      input = "/input/sf" + args(2)
     }
 
     val conf = new SparkConf().setAppName("Simple Application")
     val sc = new SparkContext(conf)
 
     // read files from local FS
-    val INPUT_DIR = "file://" + new File(".").getAbsolutePath() + "/dbgen"
+    val INPUT_DIR = "file://" + new File(".").getAbsolutePath() + "/dbgen" + input
 
     // read from hdfs
     // val INPUT_DIR: String = "/dbgen"
 
     val schemaProvider = new TpchSchemaProvider(sc, INPUT_DIR)
 
-    val output = new ListBuffer[(String, Float)]
-    for (i <- 1 to iterNum) {
-      output ++= executeQueries(sc, schemaProvider, queryNum)
-    }
+    val output = runBenchmark(sc, schemaProvider, queryNum, numIter)
 
-    val outFile = new File("TIMES.txt")
+    val fileName = "TIMES" + "-q" + queryNum + "i" + numIter + "s" + sf + "-" + LocalDateTime.now.format(DateTimeFormatter.ofPattern("YYYYMMdd_HHmmss"))
+    val outFile = new File(fileName)
     val bw = new BufferedWriter(new FileWriter(outFile, true))
 
     output.foreach {
