@@ -81,6 +81,15 @@ object TpchQuery {
   def runBenchmark(sc: SparkContext, schemaProvider: TpchSchemaProvider, queryNum: Int, numIter: Int): ListBuffer[(String, Float)] = {
     val output = new ListBuffer[(String, Float)]
 
+    // warm-up
+    val SMALL_INPUT_DIR = "file://" + new File(".").getAbsolutePath() + "/dbgen/input/sf1"
+    val smallSchemaProvider = new TpchSchemaProvider(sc, SMALL_INPUT_DIR)
+
+    sc.getConf.set("spark.sql.codegen.wholeStage", "false")
+    executeQueries(sc, smallSchemaProvider, 0)
+    sc.getConf.set("spark.sql.codegen.wholeStage", "true")
+    executeQueries(sc, smallSchemaProvider, 0)
+
     sc.getConf.set("spark.sql.codegen.wholeStage", "false")
     for (i <- 1 to numIter) {
       output.+=(("WSCG-OFF", i))
