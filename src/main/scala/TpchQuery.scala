@@ -78,28 +78,28 @@ object TpchQuery {
     return results
   }
 
-  def runBenchmark(sc: SparkContext, schemaProvider: TpchSchemaProvider, queryNum: Int, numIter: Int): ListBuffer[(String, Float)] = {
+  def runBenchmark(ss: SparkSession, schemaProvider: TpchSchemaProvider, queryNum: Int, numIter: Int): ListBuffer[(String, Float)] = {
     val output = new ListBuffer[(String, Float)]
 
     // warm-up
     val SMALL_INPUT_DIR = "file://" + new File(".").getAbsolutePath() + "/dbgen/input/sf1"
-    val smallSchemaProvider = new TpchSchemaProvider(sc, SMALL_INPUT_DIR)
+    val smallSchemaProvider = new TpchSchemaProvider(ss, SMALL_INPUT_DIR)
 
-    sc.getConf.set("spark.sql.codegen.wholeStage", "false")
-    executeQueries(sc, smallSchemaProvider, 0)
-    sc.getConf.set("spark.sql.codegen.wholeStage", "true")
-    executeQueries(sc, smallSchemaProvider, 0)
+    ss.conf.set("spark.sql.codegen.wholeStage", "false")
+    executeQueries(ss.sparkContext, smallSchemaProvider, 0)
+    ss.conf.set("spark.sql.codegen.wholeStage", "true")
+    executeQueries(ss.sparkContext, smallSchemaProvider, 0)
 
-    sc.getConf.set("spark.sql.codegen.wholeStage", "false")
+    ss.conf.set("spark.sql.codegen.wholeStage", "false")
     for (i <- 1 to numIter) {
       output.+=(("WSCG-OFF", i))
-      output ++= executeQueries(sc, schemaProvider, queryNum)
+      output ++= executeQueries(ss.sparkContext, schemaProvider, queryNum)
     }
 
-    sc.getConf.set("spark.sql.codegen.wholeStage", "true")
+    ss.conf.set("spark.sql.codegen.wholeStage", "true")
     for (i <- 1 to numIter) {
       output.+=(("WSCG-ON", i))
-      output ++= executeQueries(sc, schemaProvider, queryNum)
+      output ++= executeQueries(ss.sparkContext, schemaProvider, queryNum)
     }
 
     output
@@ -118,8 +118,12 @@ object TpchQuery {
       input = "/input/sf" + args(2)
     }
 
-    val conf = new SparkConf().setAppName("Simple Application")
-    val sc = new SparkContext(conf)
+    val sparkSession = SparkSession.builder()
+      .master("local[1]")
+      .appName("microbenchmark")
+      .config("spark.sql.shuffle.partitions", 1)
+      .config("spark.sql.autoBroadcastJoinThreshold", 1)
+      .getOrCreate()
 
     // read files from local FS
     val INPUT_DIR = "file://" + new File(".").getAbsolutePath() + "/dbgen" + input
@@ -127,9 +131,9 @@ object TpchQuery {
     // read from hdfs
     // val INPUT_DIR: String = "/dbgen"
 
-    val schemaProvider = new TpchSchemaProvider(sc, INPUT_DIR)
+    val schemaProvider = new TpchSchemaProvider(sparkSession, INPUT_DIR)
 
-    val output = runBenchmark(sc, schemaProvider, queryNum, numIter)
+    val output = runBenchmark(sparkSession, schemaProvider, queryNum, numIter)
 
     val fileName = "TIMES" + "-q" + queryNum + "i" + numIter + "s" + sf + "-" + LocalDateTime.now.format(DateTimeFormatter.ofPattern("YYYYMMdd_HHmmss"))
     val outFile = new File(fileName)
