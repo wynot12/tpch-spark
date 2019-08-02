@@ -49,8 +49,8 @@ object TpchQuery {
   def executeQueries(sc: SparkContext, schemaProvider: TpchSchemaProvider, queryNum: Int): ListBuffer[(String, Float)] = {
 
     // if set write results to hdfs, if null write to stdout
-    // val OUTPUT_DIR: String = "/tpch"
-    val OUTPUT_DIR: String = "file://" + new File(".").getAbsolutePath() + "/dbgen/output"
+    val OUTPUT_DIR: String = "/tpch"
+    // val OUTPUT_DIR: String = "file://" + new File(".").getAbsolutePath() + "/dbgen/output"
 
     val results = new ListBuffer[(String, Float)]
 
@@ -78,16 +78,12 @@ object TpchQuery {
     return results
   }
 
-  def runBenchmark(sc: SparkContext, schemaProvider: TpchSchemaProvider, queryNum: Int, numIter: Int): ListBuffer[(String, Float)] = {
+  def runBenchmark(conf: SparkConf, INPUT_DIR: String, queryNum: Int, numIter: Int): ListBuffer[(String, Float)] = {
+    val sc = new SparkContext(conf)
+    val schemaProvider = new TpchSchemaProvider(sc, INPUT_DIR)
+
     val output = new ListBuffer[(String, Float)]
 
-    sc.getConf.set("spark.sql.codegen.wholeStage", "false")
-    for (i <- 1 to numIter) {
-      output.+=(("WSCG-OFF", i))
-      output ++= executeQueries(sc, schemaProvider, queryNum)
-    }
-
-    sc.getConf.set("spark.sql.codegen.wholeStage", "true")
     for (i <- 1 to numIter) {
       output.+=(("WSCG-ON", i))
       output ++= executeQueries(sc, schemaProvider, queryNum)
@@ -101,29 +97,37 @@ object TpchQuery {
     var queryNum = 0;
     var numIter = 1;
     var sf = 1;
-    var input = ""
+    var inputPath = ""
     if (args.length > 0) {
       queryNum = args(0).toInt
       numIter = args(1).toInt
       sf = args(2).toInt
-      input = "/input/sf" + args(2)
+      inputPath = "/input/sf" + args(2)
     }
 
-    val conf = new SparkConf().setAppName("Simple Application")
-    val sc = new SparkContext(conf)
-
     // read files from local FS
-    val INPUT_DIR = "file://" + new File(".").getAbsolutePath() + "/dbgen" + input
+    // val INPUT_DIR = "file://" + new File(".").getAbsolutePath() + "/dbgen" + inputPath
 
     // read from hdfs
-    // val INPUT_DIR: String = "/dbgen"
+    val INPUT_DIR: String = "/dbgen" + inputPath
 
-    val schemaProvider = new TpchSchemaProvider(sc, INPUT_DIR)
+    val conf0 = new SparkConf()
+        .setAppName("TPC-H_WSCG-ON")
+        .set("spark.sql.codegen.wholeStage", "true")
+        //.set("spark.default.parallelism", "4")
 
-    val output = runBenchmark(sc, schemaProvider, queryNum, numIter)
+    val output = runBenchmark(conf0, INPUT_DIR, queryNum, numIter)
+
+    val conf1 = new SparkConf()
+        .setAppName("TPC-H_WSCG-OFF")
+        .set("spark.sql.codegen.wholeStage", "false")
+        //.set("spark.default.parallelism", "4")
+
+    output ++= runBenchmark(conf1, INPUT_DIR, queryNum, numIter)
+
 
     val fileName = "TIMES" + "-q" + queryNum + "i" + numIter + "s" + sf + "-" + LocalDateTime.now.format(DateTimeFormatter.ofPattern("YYYYMMdd_HHmmss"))
-    val outFile = new File(fileName)
+    val outFile = new File("/home/ubuntu/" + fileName)
     val bw = new BufferedWriter(new FileWriter(outFile, true))
 
     output.foreach {
