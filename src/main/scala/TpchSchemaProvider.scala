@@ -1,6 +1,7 @@
 package main.scala
 
 import org.apache.spark.SparkContext
+import org.apache.spark.storage.StorageLevel
 
 // TPC-H table schemas
 case class Customer(
@@ -122,6 +123,7 @@ class TpchSchemaProvider(sc: SparkContext, inputDir: String) {
   val supplier = dfMap.get("supplier").get
 
   dfMap.foreach {
-    case (key, value) => value.createOrReplaceTempView(key)
+    //case (key, value) => { value.persist(StorageLevel.MEMORY_ONLY); value.createOrReplaceTempView(key) }
+    case (key, value) => value.persist(StorageLevel.MEMORY_ONLY)
   }
 }

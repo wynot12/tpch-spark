@@ -49,7 +49,9 @@ object TpchQuery {
   def executeQueries(sc: SparkContext, schemaProvider: TpchSchemaProvider, queryNum: Int): ListBuffer[(String, Float)] = {
 
     // if set write results to hdfs, if null write to stdout
-    val OUTPUT_DIR: String = "/tpch"
+    val OUTPUT_DIR: String = ""
+
+    // val OUTPUT_DIR: String = "/tpch"
     // val OUTPUT_DIR: String = "file://" + new File(".").getAbsolutePath() + "/dbgen/output"
 
     val results = new ListBuffer[(String, Float)]
@@ -84,8 +86,7 @@ object TpchQuery {
 
     val output = new ListBuffer[(String, Float)]
 
-    for (i <- 1 to numIter) {
-      output.+=(("WSCG-ON", i))
+    for (_ <- 1 to numIter) {
       output ++= executeQueries(sc, schemaProvider, queryNum)
     }
 
@@ -111,23 +112,13 @@ object TpchQuery {
     // read from hdfs
     val INPUT_DIR: String = "/dbgen" + inputPath
 
-    val conf0 = new SparkConf()
-        .setAppName("TPC-H_WSCG-ON")
-        .set("spark.sql.codegen.wholeStage", "true")
-        //.set("spark.default.parallelism", "4")
+    val conf = new SparkConf()
+        .setAppName("TPC-H")
 
-    val output = runBenchmark(conf0, INPUT_DIR, queryNum, numIter)
+    val output = runBenchmark(conf, INPUT_DIR, queryNum, numIter)
 
-    val conf1 = new SparkConf()
-        .setAppName("TPC-H_WSCG-OFF")
-        .set("spark.sql.codegen.wholeStage", "false")
-        //.set("spark.default.parallelism", "4")
-
-    output ++= runBenchmark(conf1, INPUT_DIR, queryNum, numIter)
-
-
-    val fileName = "TIMES" + "-q" + queryNum + "i" + numIter + "s" + sf + "-" + LocalDateTime.now.format(DateTimeFormatter.ofPattern("YYYYMMdd_HHmmss"))
-    val outFile = new File("/home/ubuntu/" + fileName)
+    val fileName = "TIMES"
+    val outFile = new File("/home/ubuntu/spark-logs/" + fileName)
     val bw = new BufferedWriter(new FileWriter(outFile, true))
 
     output.foreach {
