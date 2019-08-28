@@ -126,5 +126,8 @@ object TpchQuery {
     }
 
     bw.close()
+
+    while(true)
+        Thread.sleep(1000);
   }
 }
