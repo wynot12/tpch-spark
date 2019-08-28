@@ -84,7 +84,7 @@ object TpchQuery {
     val sc = new SparkContext(conf)
 
     // read files from local FS
-    val INPUT_DIR = "file://" + new File(".").getAbsolutePath() + "/dbgen"
+    val INPUT_DIR = "file://" + new File(".").getAbsolutePath() + "/dbgen/input/sf20"
 
     // read from hdfs
     // val INPUT_DIR: String = "/dbgen"
@@ -102,5 +102,9 @@ object TpchQuery {
     }
 
     bw.close()
+
+    while(true) {
+      Thread.sleep(1000)
+    }
   }
 }
