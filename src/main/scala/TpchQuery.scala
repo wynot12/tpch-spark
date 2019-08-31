@@ -63,6 +63,13 @@ object TpchQuery {
       toNum = queryNum;
     }
 
+    // for loading input data into memory
+    for (queryNo <- 1 to 3) {
+      val query = Class.forName(f"main.scala.Q${queryNo}%02d").newInstance.asInstanceOf[TpchQuery]
+
+      outputDF(query.execute(sc, schemaProvider), OUTPUT_DIR, query.getName())
+    }
+
     for (queryNo <- fromNum to toNum) {
       val t0 = System.nanoTime()
 
@@ -126,8 +133,5 @@ object TpchQuery {
     }
 
     bw.close()
-
-    while(true)
-        Thread.sleep(1000);
   }
 }
