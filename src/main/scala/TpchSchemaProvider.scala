@@ -87,7 +87,11 @@ class TpchSchemaProvider(sc: SparkContext, inputDir: String) {
   val sqlContext = new org.apache.spark.sql.SQLContext(sc)
   import sqlContext.implicits._
 
+  val N = 500L << 22
+
   val dfMap = Map(
+    "range" -> sqlContext.range(N),
+
     "customer" -> sc.textFile(inputDir + "/customer.tbl*").map(_.split('|')).map(p =>
       Customer(p(0).trim.toLong, p(1).trim, p(2).trim, p(3).trim.toLong, p(4).trim, p(5).trim.toDouble, p(6).trim, p(7).trim)).toDF(),
 
@@ -113,6 +117,7 @@ class TpchSchemaProvider(sc: SparkContext, inputDir: String) {
       Supplier(p(0).trim.toLong, p(1).trim, p(2).trim, p(3).trim.toLong, p(4).trim, p(5).trim.toDouble, p(6).trim)).toDF())
 
   // for implicits
+  val range = dfMap.get("range").get
   val customer = dfMap.get("customer").get
   val lineitem = dfMap.get("lineitem").get
   val nation = dfMap.get("nation").get
