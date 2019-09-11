@@ -104,17 +104,18 @@ object TpchQuery {
 
     var queryNum = 0;
     var numIter = 1;
-    var sf = 1;
-    var inputPath = ""
+    var sf = "1";
+    var inputPath = "/input/sf"
     if (args.length > 0) {
       queryNum = args(0).toInt
       numIter = args(1).toInt
-      sf = args(2).toInt
-      inputPath = "/input/sf" + args(2)
+      sf = args(2)
     }
+    inputPath = "/input/sf" + sf
 
     // read files from local FS
     // val INPUT_DIR = "file://" + new File(".").getAbsolutePath() + "/dbgen" + inputPath
+    // val INPUT_DIR = "file:///home/ubuntu/dbgen" + inputPath
 
     // read from hdfs
     val INPUT_DIR: String = "/dbgen" + inputPath
