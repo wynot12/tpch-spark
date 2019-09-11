@@ -1,6 +1,6 @@
 package main.scala
 
-import org.apache.spark.SparkContext
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.storage.StorageLevel
 
 // TPC-H table schemas
@@ -81,10 +81,11 @@ case class Supplier(
   s_acctbal: Double,
   s_comment: String)
 
-class TpchSchemaProvider(sc: SparkContext, inputDir: String) {
+class TpchSchemaProvider(spark: SparkSession, inputDir: String) {
 
   // this is used to implicitly convert an RDD to a DataFrame.
-  val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+  val sqlContext = spark.sqlContext
+  val sc = spark.sparkContext
   import sqlContext.implicits._
 
   val N = 500L << 22

@@ -87,14 +87,13 @@ object TpchQuery {
     return results
   }
 
-  def runBenchmark(conf: SparkConf, INPUT_DIR: String, queryNum: Int, numIter: Int): ListBuffer[(String, Float)] = {
-    val sc = new SparkContext(conf)
-    val schemaProvider = new TpchSchemaProvider(sc, INPUT_DIR)
+  def runBenchmark(spark: SparkSession, INPUT_DIR: String, queryNum: Int, numIter: Int): ListBuffer[(String, Float)] = {
+    val schemaProvider = new TpchSchemaProvider(spark, INPUT_DIR)
 
     val output = new ListBuffer[(String, Float)]
 
     for (_ <- 1 to numIter) {
-      output ++= executeQueries(sc, schemaProvider, queryNum)
+      output ++= executeQueries(spark.sparkContext, schemaProvider, queryNum)
     }
 
     output
@@ -123,16 +122,20 @@ object TpchQuery {
     val conf = new SparkConf()
         .setAppName("TPC-H")
 
-    val output = runBenchmark(conf, INPUT_DIR, queryNum, numIter)
+    val spark = SparkSession.builder.config(conf).getOrCreate()
 
-    val fileName = "TIMES"
-    val outFile = new File("/home/ubuntu/spark-logs/" + fileName)
-    val bw = new BufferedWriter(new FileWriter(outFile, true))
-
-    output.foreach {
-      case (key, value) => bw.write(f"${key}%s\t${value}%1.8f\n")
+    println("WSCG-OFF")
+    spark.conf.set("spark.sql.codegen.wholeStage", value = false)
+    val output_off = runBenchmark(spark, INPUT_DIR, queryNum, numIter)
+    output_off.foreach {
+      case (key, value) => println(f"${key}%s\t${value}%1.8f")
     }
 
-    bw.close()
+    println("WSCG-ON")
+    spark.conf.set("spark.sql.codegen.wholeStage", value = true)
+    val output_on = runBenchmark(spark, INPUT_DIR, queryNum, numIter)
+    output_on.foreach {
+      case (key, value) => println(f"${key}%s\t${value}%1.8f")
+    }
   }
 }
